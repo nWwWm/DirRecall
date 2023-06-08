@@ -159,6 +159,7 @@ _validate_opt() {
     local distance_threshold="$5"
     local share_data="$6"
 
+    # Call the validation functions and return 1 if any of them fails
     _validate_number_data "$max_size" "max_size" ||
         return 1
 
@@ -182,3 +183,59 @@ _validate_opt() {
 if ! _validate_opt "$MAX_SIZE" "$PCD_FILE_PATH" "$IGNORE_FILE" "$ALLOW_DUPLICATES" "$DISTANCE_THRESHOLD" "$SHARE_DATA"; then
     exit 1
 fi
+
+# Section 3: Helper Functions And Variables
+#######################################################################
+
+# Define helper functions and variables used across the script
+
+# Declare and initialize the array for previous directories list
+typeset -a _prev_dirs=()
+
+for ((i=1; i<=MAX_SIZE; i++)); do
+    _prev_dirs[i]="..."
+done
+
+# Add a directory to the _prev_dirs array
+_add_directory() {
+    # Arguments:
+    # $1: max_size - Maximum size of the array
+    # $2 onwards: prev_dirs - Array containing the previous directories.
+
+    local max_size="$1"
+    shift  # Shift the arguments to remove max_size from $1
+    local prev_dirs=("$@")
+    
+    local new_dir="$PWD"
+
+    # Trim last element of array
+    local shifted_dirs=("${prev_dirs[@]:0:$(( max_size - 1 ))}")
+    
+    # Add the new directory at the beginning
+    prev_dirs=("$new_dir" "${shifted_dirs[@]}")
+
+    echo "${prev_dirs[@]}"
+}
+
+# Section 4: Command Functions
+#######################################################################
+
+# Define functions for each command
+
+# Change directory and add the previous directory to list
+cd() {
+    _prev_dirs=($(_add_directory "$MAX_SIZE" "${_prev_dirs[@]}"))
+   
+    # Change directory and capture the output/error message
+    # while maintaining the original format of error messages.
+    local cd_output
+    if ! cd_output=$(builtin cd "$@" 2>&1); then
+        local ret=$? 
+        local prefix="cd:cd:"
+        local error_message="${cd_output#$prefix*:}"
+        echo "cd:${error_message}" >&2
+        return $ret
+    fi
+    
+    builtin cd "$@"
+}
