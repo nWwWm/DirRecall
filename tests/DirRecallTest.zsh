@@ -15,7 +15,7 @@ fi
 # Define your test functions here
 
 # Test for _validate_opt function
-testValidateOpt() {
+test_validate_opt() {
   # Test valid options
   local max_size=10
   local pcd_file_path="./DirRecallTest.zsh"
@@ -28,6 +28,22 @@ testValidateOpt() {
 
   # Assert error message is not empty
   assertNull "Expected null, but got error message" "$errorMsg"
+}
+
+# Test for _add_directory function
+test_add_directory() {
+  local max_size=8
+  local prev_dirs=("/dir1" "/dir2" "/dir3" "/dir4")
+
+  # Test adding a directory to the array not fully array
+  local result
+  result=$(_add_directory "$max_size" "${prev_dirs[@]}")
+  assertEquals "Add directory" "$PWD /dir1 /dir2 /dir3 /dir4" "$result"
+
+  # Test when the array is already at maximum size
+  local max_dirs=("/dir1" "/dir2" "/dir3" "/dir4" "/dir5" "/dir6" "/dir7" "/dir8")
+  result=$(_add_directory "$max_size" "${max_dirs[@]}")
+  assertEquals "Maximum size reached" "$PWD /dir1 /dir2 /dir3 /dir4 /dir5 /dir6 /dir7" "$result"
 }
 
 # Purpose: Confirm functionality
