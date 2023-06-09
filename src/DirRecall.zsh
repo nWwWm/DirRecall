@@ -228,14 +228,18 @@ cd() {
    
     # Change directory and capture the output/error message
     # while maintaining the original format of error messages.
-    local cd_output
-    if ! cd_output=$(builtin cd "$@" 2>&1); then
-        local ret=$? 
-        local prefix="cd:cd:"
-        local error_message="${cd_output#$prefix*:}"
+    local tmp=$(mktemp)
+    builtin cd "$@" 2> "$tmp" || {
+        local ret=$?
+        local cd_output=$(cat "$tmp")
+        local error_message="${cd_output#cd:cd:*:}"
+        rm "$tmp"  # Clean up the temporary file
         echo "cd:${error_message}" >&2
         return $ret
-    fi
-    
-    builtin cd "$@"
+    }
+    rm "$tmp"  # Clean up the temporary file
+}
+
+pcd() {
+    # Implemnt this function
 }
