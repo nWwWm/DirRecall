@@ -40,50 +40,50 @@ fi
                                                                                       
 # Note:                                                                                
 #   - The maximum number of previous directories to be stored can be configured        
-#     by modifying the 'MAX_SIZE' variable.                                            
-#   - The 'FILE_PATH' variable specifies the file path for persistent storage of       
+#     by modifying the 'DRC_CONF_MAX_SIZE' variable.                                            
+#   - The 'DRC_CONF_PCD_FILE_PATH' variable specifies the file path for persistent storage of       
 #     the previous directories list.                                                   
 #   - By default, duplicate directories are not allowed in the list. You can           
-#     change this behavior by modifying the 'ALLOW_DUPLICATES' variable.               
-#   - The 'DISTANCE_THRESHOLD' variable specifies the minimum distance between         
+#     change this behavior by modifying the 'DRC_CONF_ALLOW_DUPLICATES' variable.               
+#   - The 'DRC_CONF_DISTANCE_THRESHOLD' variable specifies the minimum distance between         
 #     locations to be saved in the history list.                                       
-#   - The 'IGNORE_FILE' variable specifies the file path for storing ignored paths.    
+#   - The 'DRC_CONF_IGNORE_FILE' variable specifies the file path for storing ignored paths.    
 #   - Ignored paths are stored as hashes for privacy and security.                     
-#   - The 'SHARE_DATA' variable can be set to 'true' or 'false' to control             
+#   - The 'DRC_CONF_SHARE_DATA' variable can be set to 'true' or 'false' to control             
 #     whether the path data is shared between different shell sessions.                                                                                                     
 
 
-# Section 1: Configuration Constants
+# Section 1: Configuration 
 #######################################################################
 
-# Define constants and change configuration here
+# Define variables and change configuration here
 
 # Set the maximum size of PREV_DIRS array 
-# Format: MAX_SIZE=usinged integer           
-readonly MAX_SIZE=10
+# Format: DRC_CONF_MAX_SIZE=usinged integer           
+DRC_CONF_MAX_SIZE=10
                                             
 # File path for persistent storage         
-# Format: PCD_FILE_PATH=file path               
-readonly PCD_FILE_PATH="$HOME/.prev_dirs"
+# Format: DRC_CONF_PCD_FILE_PATH=file path               
+DRC_CONF_PCD_FILE_PATH="$HOME/.prev_dirs"
                                             
 # File path for storing ignored paths        
-# Format: IGNORE_FILE=file path              
-readonly IGNORE_FILE="$HOME/.ignore"
+# Format: DRC_CONF_IGNORE_FILE=file path              
+DRC_CONF_IGNORE_FILE="$HOME/.ignore"
                                            
 # Specify whether path repeats are allowed    
 # in the previous paths list                 
-# Format: ALLOW_DUPLICATES=false/true        
-readonly ALLOW_DUPLICATES=false
+# Format: DRC_CONF_ALLOW_DUPLICATES=false/true        
+DRC_CONF_ALLOW_DUPLICATES=false
                                          
 # Specify the minimum distance between       
 # locations to be saved to the history list  
-# Format: DISTANCE_THRESHOLD=usinged integer 
-readonly DISTANCE_THRESHOLD=1
+# Format: DRC_CONF_DISTANCE_THRESHOLD=usinged integer 
+DRC_CONF_DISTANCE_THRESHOLD=1
                                           
 # Specify whether path data is shared        
 # between different shell sessions           
-# Format: SHARE_DATA=true/false              
-readonly SHARE_DATA=true
+# Format: DRC_CONF_SHARE_DATA=true/false              
+DRC_CONF_SHARE_DATA=true
 
 
 # Section 2: Validation
@@ -91,17 +91,26 @@ readonly SHARE_DATA=true
 
 # Validate script options and configurations
 
+_max_size_value_allowed=6565535
+
 # Validate numeric data
-_validate_number_data() {
+_validate_unsigned_integer() {
     # Arguments:
     # $1: number - The numeric value to validate.
     # $2: name - The name or label of the file path for error reporting.
+    # $3 (optional): max_value - The maximum allowed value.
 
     local number="$1"
     local name="$2"
+    local max_value="$3"
 
     if ! [[ "$number" =~ ^[0-9]+$ ]]; then
         echo "Invalid $name value. Must be an unsigned integer." >&2
+        return 1
+    fi
+
+    if [[ -n "$max_value" ]] && (( number > max_value )); then
+        echo "Invalid $name value. Exceeds the maximum allowed value of $max_value." >&2
         return 1
     fi
 
@@ -160,7 +169,7 @@ _validate_opt() {
     local share_data="$6"
 
     # Call the validation functions and return 1 if any of them fails
-    _validate_number_data "$max_size" "max_size" ||
+    _validate_unsigned_integer "$max_size" "max_size" "$_max_size_value_allowed" ||
         return 1
 
     _validate_file_path "$pcd_file_path" "pcd_file_path" ||
@@ -172,7 +181,7 @@ _validate_opt() {
     _validate_boolean_option "$allow_duplicates" "allow_duplicates" ||
         return 1
 
-    _validate_number_data "$distance_threshold" "distance_threshold" ||
+    _validate_unsigned_integer "$distance_threshold" "distance_threshold" ||
         return 1
 
     _validate_boolean_option "$share_data" "share_data" ||
@@ -180,7 +189,13 @@ _validate_opt() {
 }
 
 # Call validation function and handle errors
-if ! _validate_opt "$MAX_SIZE" "$PCD_FILE_PATH" "$IGNORE_FILE" "$ALLOW_DUPLICATES" "$DISTANCE_THRESHOLD" "$SHARE_DATA"; then
+if ! _validate_opt \
+    "$DRC_CONF_MAX_SIZE" \
+    "$DRC_CONF_PCD_FILE_PATH" \
+    "$DRC_CONF_IGNORE_FILE" \
+    "$DRC_CONF_ALLOW_DUPLICATES" \
+    "$DRC_CONF_DISTANCE_THRESHOLD" \
+    "$DRC_CONF_SHARE_DATA"; then
     exit 1
 fi
 
@@ -192,7 +207,7 @@ fi
 # Declare and initialize the array for previous directories list
 typeset -a _prev_dirs=()
 
-for ((i=1; i<=MAX_SIZE; i++)); do
+for ((i=1; i<=DRC_CONF_MAX_SIZE; i++)); do
     _prev_dirs[i]="..."
 done
 
@@ -224,7 +239,7 @@ _add_directory() {
 
 # Change directory and add the previous directory to list
 cd() {
-    _prev_dirs=($(_add_directory "$MAX_SIZE" "${_prev_dirs[@]}"))
+    _prev_dirs=($(_add_directory "$DRC_CONF_MAX_SIZE" "${_prev_dirs[@]}"))
    
     # Change directory and capture the output/error message
     # while maintaining the original format of error messages.
