@@ -58,7 +58,7 @@ fi
 
 # Define variables and change configuration here
 
-# Set the maximum size of PREV_DIRS array 
+# Set the maximum size of history list 
 # Format: DRC_CONF_MAX_SIZE=usinged integer           
 DRC_CONF_MAX_SIZE=10
                                             
@@ -223,13 +223,30 @@ _add_directory() {
     
     local new_dir="$PWD"
 
-    # Trim last element of array
-    local shifted_dirs=("${prev_dirs[@]:0:$(( max_size - 1 ))}")
-    
+    # Move existing elements to make space for the new directory
+    for ((i = max_size; i > 1; i--)); do
+        prev_dirs[i]="${prev_dirs[i-1]}"
+    done
+
     # Add the new directory at the beginning
-    prev_dirs=("$new_dir" "${shifted_dirs[@]}")
+    prev_dirs[1]=$new_dir
 
     echo "${prev_dirs[@]}"
+}
+
+# Change directory and capture the output/error message
+# while maintaining the original format of error messages.
+_err_captured_cd() {
+    local tmp=$(mktemp)
+    builtin cd "$@" 2> "$tmp" || {
+        local ret=$?
+        local cd_output=$(cat "$tmp")
+        local error_message="${cd_output#_err_captured_cd:cd:*:}"
+        rm "$tmp"  # Clean up the temporary file
+        echo "cd:${error_message}" >&2
+        return $ret
+    }
+    rm "$tmp"  # Clean up the temporary file
 }
 
 # Section 4: Command Functions
@@ -240,19 +257,7 @@ _add_directory() {
 # Change directory and add the previous directory to list
 cd() {
     _prev_dirs=($(_add_directory "$DRC_CONF_MAX_SIZE" "${_prev_dirs[@]}"))
-   
-    # Change directory and capture the output/error message
-    # while maintaining the original format of error messages.
-    local tmp=$(mktemp)
-    builtin cd "$@" 2> "$tmp" || {
-        local ret=$?
-        local cd_output=$(cat "$tmp")
-        local error_message="${cd_output#cd:cd:*:}"
-        rm "$tmp"  # Clean up the temporary file
-        echo "cd:${error_message}" >&2
-        return $ret
-    }
-    rm "$tmp"  # Clean up the temporary file
+    _err_captured_cd "$@"
 }
 
 pcd() {
