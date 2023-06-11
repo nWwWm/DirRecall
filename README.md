@@ -68,6 +68,27 @@ chmod u+x DirRecallTest.zsh
 ```
 By running the tests, you can ensure that DirRecall functions as expected and validate its behavior in different scenarios.
 
+## Performance ⏱️
+
+DirRecall enhances the `cd` command by adding additional functionality to track and recall previous directories. As with any modification to a built-in command, there is a potential impact on performance.
+
+Based on performance measurements, here is a comparison between the built-in `cd` command and the modified `cd` command provided by DirRecall:
+
+
+* Built-in `cd` command: ( cd ./src/; ) 0.00s user 0.00s system 66% cpu 0.002 total
+* Modified `cd` command (DirRecall): ( cd ./src/; ) 0.01s user 0.00s system 96% cpu 0.013 total
+
+
+From the measurements above, it is evident that the modified `cd` command adds a slightly higher CPU load compared to the built-in version. However, the difference in execution time is minimal, and the overall impact on the user experience is likely to be negligible.
+
+It's important to note that these performance measurements are specific to the system and configuration on which they were conducted. The actual performance may vary depending on various factors such as system resources, workload, and specific usage scenarios.
+
+While the modified `cd` command introduces a slight performance overhead, it provides valuable additional functionality and convenience for navigating previous directories. The trade-off between performance and functionality is subjective and may vary depending on individual preferences and use cases.
+
+As a user, it's recommended to evaluate the trade-offs and consider the benefits of DirRecall's features in relation to the minor performance impact. If the added functionality aligns with your needs and the performance impact is acceptable, then DirRecall can be a useful tool in your workflow.
+
+Please note that these performance measurements are provided as a reference and may not reflect the exact performance impact on your system. It's always recommended to test the script on your specific environment and assess its performance based on your own requirements and constraints.
+
 ## Future Developments 🚀
 I have some exciting plans for the future of this script. Here are a few things I'm considering:
 * Support for Bash shell (because everyone deserves a shell of their choice!) 🐚
