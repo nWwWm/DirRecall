@@ -208,7 +208,7 @@ fi
 typeset -a _prev_dirs=()
 
 for ((i=1; i<=DRC_CONF_MAX_SIZE; i++)); do
-    _prev_dirs[i]="..."
+    _prev_dirs[i]="."
 done
 
 # Add a directory to the _prev_dirs array
@@ -260,6 +260,63 @@ cd() {
     _err_captured_cd "$@"
 }
 
+# Command to navigate to a previous directory
 pcd() {
-    # Implemnt this function
+    # Arguments:
+    # $1: The index or path of the directory to navigate to.
+    #     If an index is provided, it should be a number representing the index in the history list.
+    #     If a path is provided, it can be either an existing directory or a shortcut matching the last directory of any previous paths.
+    
+    local target=$1
+
+    if [[ -z $target ]]; then
+        # Value not provided
+        echo "Usage: pcd <index or path>" >&2
+        return 1
+    fi
+
+    local target_dir=""
+
+    if [[ "$target" =~ ^[0-9]+$ ]]; then
+        # Target is an index
+        if (( target < 1 || target > ${#_prev_dirs[@]} )); then
+            # Directory index out of range
+            echo "Error: Directory index out of range" >&2
+            return 1
+        fi
+
+        target_dir="${_prev_dirs[target]}"
+    else
+        # Target is a path
+        if [[ -d $target ]]; then
+            # Target is an existing directory
+            target_dir="$target"
+        else
+            # Check if the target matches the last directory of any previous paths
+            local found=false
+            for dir in "${_prev_dirs[@]}"; do
+                if [[ "${dir##*/}" == "$target" ]]; then
+                    target_dir="$dir"
+                    found=true
+                    break
+                fi
+            done
+
+            if [[ $found == false ]]; then
+                # Invalid directory path or shortcut
+                echo "Error: Invalid directory path or shortcut" >&2
+                return 1
+            fi
+        fi
+    fi
+
+    cd "$target_dir"
 }
+
+# Section 5: Additional Functions Or Logic
+#######################################################################
+
+# Add extra functions or logic
+
+# Alias for pcd as jump
+alias jump=pcd
