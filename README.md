@@ -1,3 +1,5 @@
+<img src="./img/penguin.png" width="200" height="200">
+
 # DirRecall 📂👣🐧
 DirRecall is a simple nifty shell script that simplifies your directory navigation within the terminal, allowing you to swiftly recall and traverse your previous directories. 🚀
 
