@@ -85,6 +85,24 @@ DRC_CONF_DISTANCE_THRESHOLD=1
 # Format: DRC_CONF_SHARE_DATA=true/false              
 DRC_CONF_SHARE_DATA=true
 
+# Custom formatting function for lpcd command
+
+# This function allows users to define their own formatting logic for the output of the lpcd command.
+# Users can override the default formatting by defining their own function with the name `_lpcd_format_custom`.
+# The function should accept a single argument, which is an array of previous directories `_prev_dirs`,
+# and it should output the desired formatting for the directory list.
+# If no custom formatting function is defined, the default formatting will be used.
+
+# Example of a custom formatting function:
+# _lpcd_format_custom() {
+#     local prev_dirs=("$@")
+#     for dir in "${prev_dirs[@]}"; do
+#         echo "Directory: $dir"
+#     done
+# }
+
+# To use the custom formatting, define this function in your script and customize it according to your needs.
+# The `lpcd` command will automatically use the custom formatting if the function is defined.
 
 # Section 2: Validation
 #######################################################################
@@ -207,9 +225,9 @@ fi
 # Declare and initialize the array for previous directories list
 typeset -a _prev_dirs=()
 
-for ((i=1; i<=DRC_CONF_MAX_SIZE; i++)); do
-    _prev_dirs[i]="."
-done
+# for ((i=1; i<=DRC_CONF_MAX_SIZE; i++)); do
+#     _prev_dirs[i]="."
+# done
 
 # Add a directory to the _prev_dirs array
 _add_directory() {
@@ -247,6 +265,30 @@ _err_captured_cd() {
         return $ret
     }
     rm "$tmp"  # Clean up the temporary file
+}
+
+# Default formatting logic for lpcd
+_lpcd_format_default() {
+    # Arguments:
+    # $@: prev_dirs - Array containing the previous directories.
+    
+    local prev_dirs=("$@")
+
+    local index=1
+    local format="%-5s %-25s\n"
+    local index_color="$(tput bold; tput setaf 4)"
+    local reset_color="$(tput sgr0)"
+
+    if [[ ${#prev_dirs[@]} -eq 0 ]]; then
+        echo "No previous directories found"
+        return
+    fi
+
+    printf "$format" "${index_color}Index" "Path${reset_color}"
+    for dir in "${prev_dirs[@]}"; do
+        printf "$format" "${index_color}$index${reset_color}" "$dir"
+        ((index++))
+    done
 }
 
 # Section 4: Command Functions
@@ -311,6 +353,22 @@ pcd() {
     fi
 
     cd "$target_dir"
+}
+
+# Command to display the history list
+lpcd() {
+
+    # Check if custom forrmating function is defined
+    if type "_lpcd_format_custom" > /dev/null 2>&1; then
+        # Call the custom formatting function
+        if ! _lpcd_format_custom "${_prev_dirs[@]}"; then
+            echo "Custom formatting failed, usinf default formatting..."
+            _lpcd_format_default "${_prev_dirs[@]}"
+        fi
+    else
+        # Custom formatting function not defined, use default formatting
+        _lpcd_format_default "${_prev_dirs[@]}"
+    fi 
 }
 
 # Section 5: Additional Functions Or Logic
