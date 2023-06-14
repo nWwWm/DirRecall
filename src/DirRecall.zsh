@@ -229,17 +229,53 @@ typeset -a _prev_dirs=()
 #     _prev_dirs[i]="."
 # done
 
+# Function to check if a directory is a duplicate
+_is_duplicate() {
+    # Arguments:
+    # $1: dir_to_check - Directory to check.
+    # $2: allow_duplicates - Boolean flag to allow duplicates.
+    # $3 onwards: prev_dirs - Array containing the previous directories.
+    
+    local dir_to_check="$1"
+    local allow_duplicates="$2"
+    local prev_dirs=("${@:3}")
+
+    # Check the duplicate interpretation mode
+    if [[ $allow_duplicates == true ]]; then
+        # Check if the new directory is the same as the latest element
+        if [[ "$dir_to_check" == "${prev_dirs[1]}" ]]; then
+            return 0  # Duplicate directory found
+        fi
+    else
+        # Check if the new directory already exists in the array
+        for dir in "${prev_dirs[@]}"; do
+            if [[ "$dir_to_check" == "$dir" ]]; then
+                return 0  # Duplicate directory found
+            fi
+        done
+    fi
+
+    return 1  # Directory is not a duplicate
+}
+
 # Add a directory to the _prev_dirs array
 _add_directory() {
     # Arguments:
     # $1: max_size - Maximum size of the array
-    # $2 onwards: prev_dirs - Array containing the previous directories.
+    # $2: allow_duplicates - Boolean flag to allow duplicates.
+    # $3 onwards: prev_dirs - Array containing the previous directories.
 
     local max_size="$1"
-    shift  # Shift the arguments to remove max_size from $1
-    local prev_dirs=("$@")
-    
+    local allow_duplicates="$2"
+    local prev_dirs=("${@:3}")
+
     local new_dir="$PWD"
+
+    # Check for duplicates
+    if _is_duplicate "$new_dir" "$allow_duplicates" "${prev_dirs[@]}"; then
+        echo "${prev_dirs[@]}"
+        return  # Skip adding duplicate directory
+    fi
 
     # Move existing elements to make space for the new directory
     for ((i = max_size; i > 1; i--)); do
@@ -298,7 +334,7 @@ _lpcd_format_default() {
 
 # Change directory and add the previous directory to list
 cd() {
-    _prev_dirs=($(_add_directory "$DRC_CONF_MAX_SIZE" "${_prev_dirs[@]}"))
+    _prev_dirs=($(_add_directory "$DRC_CONF_MAX_SIZE" "$DRC_CONF_ALLOW_DUPLICATES" "${_prev_dirs[@]}"))
     _err_captured_cd "$@"
 }
 
