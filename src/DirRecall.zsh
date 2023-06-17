@@ -78,7 +78,7 @@ DRC_CONF_ALLOW_DUPLICATES=false
 # Specify the minimum distance between       
 # locations to be saved to the history list  
 # Format: DRC_CONF_DISTANCE_THRESHOLD=usinged integer 
-DRC_CONF_DISTANCE_THRESHOLD=1
+DRC_CONF_DISTANCE_THRESHOLD=3
                                           
 # Specify whether path data is shared        
 # between different shell sessions           
@@ -258,16 +258,54 @@ _is_duplicate() {
     return 1  # Directory is not a duplicate
 }
 
+# Function to calculate the distance between two directories
+_calculate_distance() {
+    # Arguments:
+    # $1: dir1 - First directory path.
+    # $2: dir2 - Second directory path.
+    
+    local dir1=$1
+    local dir2=$2
+    local dir1_normalized=${dir1%/}
+    local dir2_normalized=${dir2%/}
+    local dir1_components=(${(s:/:)dir1_normalized})
+    local dir2_components=(${(s:/:)dir2_normalized})
+
+    # If both directories are the same, distance is zero
+    if [[ $dir1_normalized == $dir2_normalized ]]; then
+        echo 0
+        return
+    fi
+
+    local common_path_length=0
+    local i=1
+
+    # Find the length of the common path
+    while [[ "${dir1_components[i]}" == "${dir2_components[i]}" ]]; do
+        ((common_path_length++))
+        ((i++))
+    done
+
+    # Calculate the distance as the difference in the number of changing directories
+    local dir1_distance=$(( ${#dir1_components[@]} - common_path_length ))
+    local dir2_distance=$(( ${#dir2_components[@]} - common_path_length ))
+    local distance=$(( dir1_distance + dir2_distance ))
+
+    echo "$distance"
+}
+
 # Add a directory to the _prev_dirs array
 _add_directory() {
     # Arguments:
     # $1: max_size - Maximum size of the array
     # $2: allow_duplicates - Boolean flag to allow duplicates.
-    # $3 onwards: prev_dirs - Array containing the previous directories.
+    # $3: distance_threshold - Maximum number of directory changes (one folder at a time) to reach the directories in the array from the current working directory.
+    # $4 onwards: prev_dirs - Array containing the previous directories.
 
     local max_size="$1"
     local allow_duplicates="$2"
-    local prev_dirs=("${@:3}")
+    local distance_threshold="$3"
+    local prev_dirs=("${@:4}")
 
     local new_dir="$PWD"
 
@@ -276,6 +314,15 @@ _add_directory() {
         echo "${prev_dirs[@]}"
         return  # Skip adding duplicate directory
     fi
+
+    # Check distance to previously saved directories
+    for dir in "${prev_dirs[@]}"; do
+        local distance=$(_calculate_distance "$dir" "$new_dir")
+        if ((distance < distance_threshold)); then
+            echo "${prev_dirs[@]}"
+            return  # Skip adding directory if within distance threshold
+        fi
+    done
 
     # Move existing elements to make space for the new directory
     for ((i = max_size; i > 1; i--)); do
@@ -334,7 +381,7 @@ _lpcd_format_default() {
 
 # Change directory and add the previous directory to list
 cd() {
-    _prev_dirs=($(_add_directory "$DRC_CONF_MAX_SIZE" "$DRC_CONF_ALLOW_DUPLICATES" "${_prev_dirs[@]}"))
+    _prev_dirs=($(_add_directory "$DRC_CONF_MAX_SIZE" "$DRC_CONF_ALLOW_DUPLICATES" "$DRC_CONF_DISTANCE_THRESHOLD" "${_prev_dirs[@]}"))
     _err_captured_cd "$@"
 }
 
